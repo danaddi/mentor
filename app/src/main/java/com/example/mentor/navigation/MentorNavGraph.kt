@@ -1,226 +1,205 @@
 package com.example.mentor.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Note
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.mentor.R
 import com.example.mentor.data.local.TokenDataStore
-import com.example.mentor.presentation.auth.AuthViewModel
 import com.example.mentor.presentation.auth.LoginScreen
 import com.example.mentor.presentation.auth.RegisterScreen
 import com.example.mentor.presentation.chat.ChatScreen
 import com.example.mentor.presentation.chathistory.ChatHistoryScreen
-import com.example.mentor.presentation.emotion.EmotionScreen
-import com.example.mentor.presentation.gratitude.GratitudeScreen
 import com.example.mentor.presentation.notes.NotesScreen
 import com.example.mentor.presentation.profile.ProfileScreen
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.map
-import javax.inject.Inject
+import com.example.mentor.presentation.tracker.EmotionGratitudeScreen
 
-sealed class Screen(val route: String) {
-    object Login : Screen("login")
-    object Register : Screen("register")
-    object Chat : Screen("chat")
-    object ChatHistory : Screen("chat_history")
-    object Notes : Screen("notes")
-    object Emotion : Screen("emotion")
-    object Gratitude : Screen("gratitude")
-    object Profile : Screen("profile")
-    object Home : Screen("home")
+// Route constants
+object Routes {
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val MAIN = "main"  // parent route for bottom-nav scaffold
+    const val CHAT = "chat"
+    const val NOTES = "notes"
+    const val TRACKER = "tracker"
+    const val PROFILE = "profile"
+    const val CHAT_HISTORY = "chat_history"
 }
 
 @Composable
-fun MentorNavGraph(
-    navController: NavHostController = rememberNavController(),
-    viewModel: NavigationViewModel = hiltViewModel()
-) {
-    val startDestination = viewModel.getStartDestination()
-
+fun MentorNavGraph(tokenDataStore: TokenDataStore) {
+    // Read saved token to determine start destination
+    val token by tokenDataStore.token.collectAsState(initial = null)
+    
+    // Wait for token check
+    var startDestination by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(token) {
+        startDestination = if (token != null) Routes.MAIN else Routes.LOGIN
+    }
+    
+    if (startDestination == null) return  // show nothing while checking token
+    
+    val rootNavController = rememberNavController()
+    
     NavHost(
-        navController = navController,
-        startDestination = startDestination
+        navController = rootNavController,
+        startDestination = startDestination!!
     ) {
-        composable(Screen.Login.route) {
+        // Auth screens — NO bottom bar
+        composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    rootNavController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
                 onNavigateToRegister = {
-                    navController.navigate(Screen.Register.route)
+                    rootNavController.navigate(Routes.REGISTER)
                 }
             )
         }
-
-        composable(Screen.Register.route) {
+        
+        composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    rootNavController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
                 onNavigateToLogin = {
-                    navController.popBackStack()
+                    rootNavController.popBackStack()
                 }
             )
         }
-
-        composable(Screen.Home.route) {
-            HomeScreen(
-                onNavigateToChat = {
-                    navController.navigate(Screen.Chat.route)
-                },
-                onNavigateToChatHistory = {
-                    navController.navigate(Screen.ChatHistory.route)
-                },
-                onNavigateToNotes = {
-                    navController.navigate(Screen.Notes.route)
-                },
-                onNavigateToEmotion = {
-                    navController.navigate(Screen.Emotion.route)
-                },
-                onNavigateToGratitude = {
-                    navController.navigate(Screen.Gratitude.route)
-                },
-                onNavigateToProfile = {
-                    navController.navigate(Screen.Profile.route)
-                }
+        
+        // Main scaffold with persistent bottom bar
+        composable(Routes.MAIN) {
+            MainScreen(
+                rootNavController = rootNavController
             )
         }
-
-        composable(Screen.Chat.route) {
-            ChatScreen()
-        }
-
-        composable(Screen.ChatHistory.route) {
+        
+        // Chat history screen - separate route outside main scaffold
+        composable(Routes.CHAT_HISTORY) {
             ChatHistoryScreen(
                 onSessionClick = { sessionId ->
-                    // Navigate to chat with session ID
-                    navController.navigate(Screen.Chat.route)
+                    // Navigate back to chat with session ID
+                    rootNavController.popBackStack()
                 }
             )
         }
-
-        composable(Screen.Notes.route) {
-            NotesScreen()
-        }
-
-        composable(Screen.Emotion.route) {
-            EmotionScreen()
-        }
-
-        composable(Screen.Gratitude.route) {
-            GratitudeScreen()
-        }
-
-        composable(Screen.Profile.route) {
-            ProfileScreen(
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            )
-        }
-    }
-}
-
-@HiltViewModel
-class NavigationViewModel @Inject constructor(
-    private val tokenDataStore: TokenDataStore
-) : androidx.lifecycle.ViewModel() {
-    @androidx.compose.runtime.Composable
-    fun getStartDestination(): String {
-        val token by tokenDataStore.token.collectAsState(initial = null)
-        return if (token != null) Screen.Home.route else Screen.Login.route
     }
 }
 
 @Composable
-fun HomeScreen(
-    onNavigateToChat: () -> Unit,
-    onNavigateToChatHistory: () -> Unit,
-    onNavigateToNotes: () -> Unit,
-    onNavigateToEmotion: () -> Unit,
-    onNavigateToGratitude: () -> Unit,
-    onNavigateToProfile: () -> Unit
-) {
+fun MainScreen(rootNavController: androidx.navigation.NavController) {
+    val bottomNavController = rememberNavController()
+    
+    // Bottom nav items
+    val bottomNavItems = listOf(
+        BottomNavItem(Routes.CHAT, R.drawable.home, "Чат"),
+        BottomNavItem(Routes.NOTES, R.drawable.list, "Заметки"),
+        BottomNavItem(Routes.TRACKER, R.drawable.stars, "Трекер"),
+        BottomNavItem(Routes.PROFILE, R.drawable.account, "Профиль"),
+    )
+    
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToChat,
-                    icon = { Icon(Icons.Default.ChatBubble, contentDescription = null) },
-                    label = { Text("Чат") }
+            // Custom bottom bar — always visible
+            NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+                val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    bottomNavItems.forEachIndexed { index, item ->
+                        if (index > 0) Spacer(modifier = Modifier.width(48.dp))
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        IconButton(onClick = {
+                            bottomNavController.navigate(item.route) {
+                                popUpTo(bottomNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }) {
+                            Icon(
+                                painter = painterResource(item.iconRes),
+                                contentDescription = item.label,
+                                modifier = Modifier.size(24.dp).alpha(if (selected) 1f else 0.5f),
+                                tint = Color(0xFF1A1A1A)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = bottomNavController,
+            startDestination = Routes.CHAT,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Routes.CHAT) { 
+                ChatScreen(
+                    onNavigateToHistory = {
+                        rootNavController.navigate(Routes.CHAT_HISTORY)
+                    }
                 )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToChatHistory,
-                    icon = { Icon(Icons.Default.History, contentDescription = null) },
-                    label = { Text("История") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToNotes,
-                    icon = { Icon(Icons.Default.Note, contentDescription = null) },
-                    label = { Text("Заметки") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToEmotion,
-                    icon = { Icon(Icons.Default.EmojiEmotions, contentDescription = null) },
-                    label = { Text("Эмоции") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToGratitude,
-                    icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                    label = { Text("Благодарность") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToProfile,
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Профиль") }
+            }
+            composable(Routes.NOTES) { NotesScreen() }
+            composable(Routes.TRACKER) { EmotionGratitudeScreen() }
+            composable(Routes.PROFILE) { 
+                ProfileScreen(
+                    onLogout = {
+                        rootNavController.navigate(Routes.LOGIN) {
+                            popUpTo(Routes.MAIN) { inclusive = true }
+                        }
+                    }
                 )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Добро пожаловать в MentorMind!",
-                style = MaterialTheme.typography.headlineMedium
-            )
-        }
     }
 }
+
+data class BottomNavItem(val route: String, val iconRes: Int, val label: String)

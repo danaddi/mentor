@@ -6,14 +6,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mentor.ui.theme.MentorPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,6 +25,7 @@ fun NotesScreen(
     viewModel: NotesViewModel = hiltViewModel()
 ) {
     var showAddNoteDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -28,90 +33,117 @@ fun NotesScreen(
             TopAppBar(
                 title = { Text("Заметки") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                actions = {
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Обновить")
-                    }
-                }
+                    containerColor = Color.White,
+                    titleContentColor = Color(0xFF1A1A1A)
+                )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddNoteDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MentorPrimary,
+                modifier = Modifier.size(56.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить заметку")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Добавить заметку",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     ) { paddingValues ->
-        when (val state = uiState) {
-            is NotesUiState.Initial -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            is NotesUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            is NotesUiState.Success -> {
-                if (state.notes.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text("Поиск по заметкам") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search")
+                },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = MentorPrimary,
+                    unfocusedIndicatorColor = Color(0xFF8C8C8C)
+                )
+            )
+
+            when (val state = uiState) {
+                is NotesUiState.Initial -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Заметок пока нет",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        CircularProgressIndicator()
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                }
+                is NotesUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(state.notes) { note ->
-                            NoteItem(note = note)
+                        CircularProgressIndicator()
+                    }
+                }
+                is NotesUiState.Success -> {
+                    val filteredNotes = if (searchQuery.isBlank()) {
+                        state.notes
+                    } else {
+                        state.notes.filter { 
+                            it.content.contains(searchQuery, ignoreCase = true) 
+                        }
+                    }
+
+                    if (filteredNotes.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "Ничего не найдено" else "Заметок пока нет",
+                                fontSize = 16.sp,
+                                color = Color(0xFF8C8C8C)
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredNotes) { note ->
+                                NoteItem(note = note)
+                            }
                         }
                     }
                 }
-            }
-            is NotesUiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                is NotesUiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refresh() }) {
-                            Text("Попробовать снова")
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = state.message,
+                                color = Color(0xFFC33636)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text("Попробовать снова")
+                            }
                         }
                     }
                 }
@@ -134,7 +166,11 @@ fun NotesScreen(
 fun NoteItem(note: com.example.mentor.domain.model.Note) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -143,13 +179,16 @@ fun NoteItem(note: com.example.mentor.domain.model.Note) {
         ) {
             Text(
                 text = note.content,
-                style = MaterialTheme.typography.bodyMedium
+                fontSize = 14.sp,
+                color = Color(0xFF1A1A1A),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = note.createdAt,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 12.sp,
+                color = Color(0xFF8C8C8C)
             )
         }
     }
@@ -163,36 +202,45 @@ fun AddNoteDialog(
     var noteContent by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
+                modifier = Modifier.padding(16.dp)
             ) {
                 Text(
                     text = "Новая заметка",
-                    style = MaterialTheme.typography.titleMedium
+                    fontSize = 18.sp,
+                    color = Color(0xFF1A1A1A),
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = noteContent,
                     onValueChange = { noteContent = it },
-                    placeholder = { Text("Введите текст заметки...") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp),
-                    maxLines = 5
+                    placeholder = { Text("Введите текст заметки...") },
+                    maxLines = 5,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedIndicatorColor = MentorPrimary,
+                        unfocusedIndicatorColor = Color(0xFF8C8C8C)
+                    )
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Отмена")
+                        Text("Отмена", color = Color(0xFF8C8C8C))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -201,7 +249,11 @@ fun AddNoteDialog(
                                 onConfirm(noteContent)
                             }
                         },
-                        enabled = noteContent.isNotBlank()
+                        enabled = noteContent.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MentorPrimary,
+                            contentColor = Color.White
+                        )
                     ) {
                         Text("Сохранить")
                     }
