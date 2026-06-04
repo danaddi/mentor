@@ -21,6 +21,8 @@ class TokenDataStore @Inject constructor(
     companion object {
         val TOKEN_KEY = stringPreferencesKey("jwt_token")
         val USER_ID_KEY = stringPreferencesKey("user_id")
+        val USER_NAME_KEY = stringPreferencesKey("user_name")
+        val USER_EMAIL_KEY = stringPreferencesKey("user_email")
     }
 
     val token: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -31,10 +33,20 @@ class TokenDataStore @Inject constructor(
         prefs[USER_ID_KEY]
     }
 
-    suspend fun saveToken(token: String, userId: String) {
+    val userName: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[USER_NAME_KEY]
+    }
+
+    val userEmail: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[USER_EMAIL_KEY]
+    }
+
+    suspend fun saveToken(token: String, userId: String, name: String? = null, email: String? = null) {
         context.dataStore.edit { prefs ->
             prefs[TOKEN_KEY] = token
             prefs[USER_ID_KEY] = userId
+            name?.let { prefs[USER_NAME_KEY] = it }
+            email?.let { prefs[USER_EMAIL_KEY] = it }
         }
     }
 
@@ -42,6 +54,8 @@ class TokenDataStore @Inject constructor(
         context.dataStore.edit { prefs ->
             prefs.remove(TOKEN_KEY)
             prefs.remove(USER_ID_KEY)
+            prefs.remove(USER_NAME_KEY)
+            prefs.remove(USER_EMAIL_KEY)
         }
     }
 }

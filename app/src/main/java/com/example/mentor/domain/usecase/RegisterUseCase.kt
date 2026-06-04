@@ -7,7 +7,7 @@ import javax.inject.Inject
 class RegisterUseCase @Inject constructor(
     private val authRepository: AuthRepository
 ) {
-    suspend operator fun invoke(email: String, password: String): Result<User> {
-        return authRepository.register(email, password)
+    suspend operator fun invoke(name: String, email: String, password: String): Result<User> {
+        return authRepository.register(name, email, password)
     }
 }

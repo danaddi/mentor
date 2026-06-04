@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,9 +26,19 @@ class ProfileViewModel @Inject constructor(
     fun loadUserInfo() {
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
-            authRepository.getUserId().collect { userId ->
+            combine(
+                authRepository.getUserId(),
+                authRepository.getUserName(),
+                authRepository.getUserEmail()
+            ) { userId, userName, userEmail ->
+                Triple(userId, userName, userEmail)
+            }.collect { (userId, userName, userEmail) ->
                 if (userId != null) {
-                    _uiState.value = ProfileUiState.Success(userId)
+                    _uiState.value = ProfileUiState.Success(
+                        userId = userId,
+                        userName = userName ?: "Пользователь",
+                        userEmail = userEmail ?: ""
+                    )
                 } else {
                     _uiState.value = ProfileUiState.Error("User not logged in")
                 }
@@ -41,12 +52,31 @@ class ProfileViewModel @Inject constructor(
             _uiState.value = ProfileUiState.LoggedOut
         }
     }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            _uiState.value = ProfileUiState.Loading
+            val result = authRepository.deleteAccount()
+            result.fold(
+                onSuccess = {
+                    _uiState.value = ProfileUiState.LoggedOut
+                },
+                onFailure = { error ->
+                    _uiState.value = ProfileUiState.Error(error.message ?: "Ошибка удаления аккаунта")
+                }
+            )
+        }
+    }
 }
 
 sealed class ProfileUiState {
     object Initial : ProfileUiState()
     object Loading : ProfileUiState()
-    data class Success(val userId: String) : ProfileUiState()
+    data class Success(
+        val userId: String,
+        val userName: String,
+        val userEmail: String
+    ) : ProfileUiState()
     data class Error(val message: String) : ProfileUiState()
     object LoggedOut : ProfileUiState()
 }

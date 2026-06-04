@@ -2,7 +2,6 @@ package com.example.mentor.presentation.auth
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,11 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.mentor.ui.theme.*
+import com.example.mentor.ui.theme.MentorPrimary
+import com.example.mentor.ui.theme.MentorTheme
 
 @Composable
 fun RegisterScreen(
@@ -36,6 +37,7 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var agreedToDisclaimer by remember { mutableStateOf(false) }
+    var agreedToAimate by remember { mutableStateOf(false) }
     var showGenderDropdown by remember { mutableStateOf(false) }
     var selectedGender by remember { mutableStateOf<String?>(null) }
     val uiState by viewModel.uiState.collectAsState()
@@ -64,7 +66,6 @@ fun RegisterScreen(
                 .padding(start = 24.dp, end = 24.dp, top = 96.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Part A: Title
             Text(
                 text = "Регистрация",
                 fontSize = 24.sp,
@@ -74,15 +75,12 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(56.dp))
 
-            // Part B: Input fields and actions
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // B11: Input fields container (name, email, gender)
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Name field
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -111,7 +109,6 @@ fun RegisterScreen(
                         )
                     }
 
-                    // Email field
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -141,7 +138,6 @@ fun RegisterScreen(
                         )
                     }
 
-                    // Gender field (dropdown button)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -176,11 +172,9 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // B12: Password fields
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Password field
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -211,7 +205,6 @@ fun RegisterScreen(
                         )
                     }
 
-                    // Confirm password field
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -245,13 +238,13 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(40.dp))
 
-                // B2: Actions
                 Button(
                     onClick = {
-                        if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank() && 
-                            confirmPassword.isNotBlank() && password == confirmPassword && 
-                            agreedToDisclaimer && selectedGender != null) {
-                            viewModel.register(email, password)
+                        if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank() &&
+                            confirmPassword.isNotBlank() && password == confirmPassword &&
+                            agreedToDisclaimer && agreedToAimate && selectedGender != null
+                        ) {
+                            viewModel.register(name, email, password)
                         }
                     },
                     modifier = Modifier
@@ -279,7 +272,6 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Checkbox row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -314,9 +306,44 @@ fun RegisterScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = RoundedCornerShape(30.dp),
+                        color = Color.White,
+                        border = if (agreedToAimate) null else BorderStroke(1.dp, Color(0xFF8C8C8C)),
+                        onClick = { agreedToAimate = !agreedToAimate }
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (agreedToAimate) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Checked",
+                                    tint = Color(0xFF6D5F57),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Я понимаю, что Aimate — это ментор, а не врач, и не даёт медицинских рекомендаций",
+                        fontSize = 14.sp,
+                        color = Color(0xFF1A1A1A)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Bottom text
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -338,8 +365,6 @@ fun RegisterScreen(
             }
         }
     }
-
-    // Gender dropdown dialog
     if (showGenderDropdown) {
         Dialog(onDismissRequest = { showGenderDropdown = false }) {
             Card(
@@ -368,3 +393,14 @@ fun RegisterScreen(
         }
     }
 }
+
+//@Preview(showBackground = true, showSystemUi = true, name = "Register Screen")
+//@Composable
+//private fun RegisterScreenPreview() {
+//    MentorTheme {
+//        RegisterScreen(
+//            onRegisterSuccess = {},
+//            onNavigateToLogin = {}
+//        )
+//    }
+//}

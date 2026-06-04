@@ -2,7 +2,6 @@ package com.example.mentor.presentation.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,19 +10,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.mentor.ui.theme.*
+import com.example.mentor.ui.theme.MentorOutlineAccent
+import com.example.mentor.ui.theme.MentorPrimary
+import com.example.mentor.ui.theme.MentorTheme
 
 @Composable
 fun ProfileScreen(
@@ -38,6 +45,64 @@ fun ProfileScreen(
         }
     }
 
+    val userName = when (val state = uiState) {
+        is ProfileUiState.Success -> state.userName
+        else -> "Пользователь"
+    }
+
+    val userEmail = when (val state = uiState) {
+        is ProfileUiState.Success -> state.userEmail
+        is ProfileUiState.Error -> state.message
+        else -> ""
+    }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    ProfileScreenContent(
+        userName = userName,
+        userEmail = userEmail,
+        onLogout = { viewModel.logout() },
+        onDeleteAccount = { showDeleteDialog = true }
+    )
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "Удалить аккаунт",
+                    fontWeight = FontWeight.Medium
+                )
+            },
+            text = {
+                Text("Вы уверены, что хотите удалить аккаунт? Это действие необратимо.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteAccount()
+                    }
+                ) {
+                    Text("Удалить", color = Color(0xFFC33636))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun ProfileScreenContent(
+    userName: String,
+    userEmail: String,
+    onLogout: () -> Unit,
+    onDeleteAccount: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -55,12 +120,10 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(horizontal = 24.dp, vertical = 48.dp)
         ) {
-            // Top section: User info
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -77,19 +140,18 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.width(24.dp))
 
-                // User info column
                 Column(
                     modifier = Modifier.padding(vertical = 15.dp)
                 ) {
                     Text(
-                        text = "Пользователь",
+                        text = userName,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF1A1A1A)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "user@example.com",
+                        text = userEmail,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF8C8C8C)
@@ -99,10 +161,9 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Support card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
                 ),
@@ -131,16 +192,14 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action cards
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Logout card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.logout() },
-                    shape = RoundedCornerShape(12.dp),
+                        .clickable { onLogout() },
+                    shape = RoundedCornerShape(30.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color.Transparent
                     ),
@@ -168,12 +227,11 @@ fun ProfileScreen(
                     }
                 }
 
-                // Delete account card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { /* TODO: Implement delete account */ },
-                    shape = RoundedCornerShape(12.dp),
+                        .clickable { onDeleteAccount() },
+                    shape = RoundedCornerShape(30.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color.Transparent
                     ),
@@ -202,5 +260,18 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Profile Screen")
+@Composable
+private fun ProfileScreenPreview() {
+    MentorTheme {
+        ProfileScreenContent(
+            userName = "Иван",
+            userEmail = "user@example.com",
+            onLogout = {},
+            onDeleteAccount = {}
+        )
     }
 }

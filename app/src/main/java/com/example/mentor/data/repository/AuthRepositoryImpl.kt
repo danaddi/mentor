@@ -9,17 +9,18 @@ import com.example.mentor.domain.repository.AuthRepository
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class AuthRepositoryImpl(
     private val apiService: MentorApiService,
     private val tokenDataStore: TokenDataStore
 ) : AuthRepository {
 
-    override suspend fun register(email: String, password: String): Result<User> {
+    override suspend fun register(name: String, email: String, password: String): Result<User> {
         return try {
-            val request = RegisterRequest(email, password, agreedToDisclaimer = true)
+            val request = RegisterRequest(name, email, password, agreedToDisclaimer = true)
             val response = apiService.register(request)
-            tokenDataStore.saveToken(response.token, response.userId)
+            tokenDataStore.saveToken(response.token, response.userId, name = name, email = email)
             Result.success(User(response.userId, response.token))
         } catch (e: ClientRequestException) {
             when (e.response.status.value) {
@@ -37,7 +38,7 @@ class AuthRepositoryImpl(
         return try {
             val request = LoginRequest(email, password)
             val response = apiService.login(request)
-            tokenDataStore.saveToken(response.token, response.userId)
+            tokenDataStore.saveToken(response.token, response.userId, email = email)
             Result.success(User(response.userId, response.token))
         } catch (e: ClientRequestException) {
             when (e.response.status.value) {
@@ -60,7 +61,30 @@ class AuthRepositoryImpl(
         return tokenDataStore.userId
     }
 
+    override fun getUserName(): Flow<String?> {
+        return tokenDataStore.userName
+    }
+
+    override fun getUserEmail(): Flow<String?> {
+        return tokenDataStore.userEmail
+    }
+
     override suspend fun logout() {
         tokenDataStore.clearToken()
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            val token = tokenDataStore.token.first() ?: throw Exception("Not authenticated")
+            apiService.deleteAccount(token)
+            tokenDataStore.clearToken()
+            Result.success(Unit)
+        } catch (e: ClientRequestException) {
+            Result.failure(Exception("Ошибка удаления аккаунта"))
+        } catch (e: ServerResponseException) {
+            Result.failure(Exception("Ошибка сервера. Попробуйте позже"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Ошибка сети. Проверьте подключение к интернету"))
+        }
     }
 }
