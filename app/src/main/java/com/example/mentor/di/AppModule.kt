@@ -1,7 +1,12 @@
 package com.example.mentor.di
 
 import android.content.Context
+import androidx.room.Room
+import com.example.mentor.data.local.MentorDatabase
 import com.example.mentor.data.local.TokenDataStore
+import com.example.mentor.data.local.dao.EmotionDao
+import com.example.mentor.data.local.dao.GratitudeDao
+import com.example.mentor.data.local.dao.NoteDao
 import com.example.mentor.data.remote.api.MentorApiService
 import dagger.Module
 import dagger.Provides
@@ -49,5 +54,33 @@ object AppModule {
     @Singleton
     fun provideTokenDataStore(@ApplicationContext context: Context): TokenDataStore {
         return TokenDataStore(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMentorDatabase(@ApplicationContext context: Context): MentorDatabase {
+        return Room.databaseBuilder(
+            context,
+            MentorDatabase::class.java,
+            "mentor_database"
+        ).build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNoteDao(database: MentorDatabase): NoteDao {
+        return database.noteDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideEmotionDao(database: MentorDatabase): EmotionDao {
+        return database.emotionDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGratitudeDao(database: MentorDatabase): GratitudeDao {
+        return database.gratitudeDao()
     }
 }

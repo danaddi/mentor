@@ -1,6 +1,9 @@
 package com.example.mentor.di
 
 import com.example.mentor.data.local.TokenDataStore
+import com.example.mentor.data.local.dao.EmotionDao
+import com.example.mentor.data.local.dao.GratitudeDao
+import com.example.mentor.data.local.dao.NoteDao
 import com.example.mentor.data.remote.api.MentorApiService
 import com.example.mentor.data.repository.*
 import com.example.mentor.domain.repository.*
@@ -36,26 +39,29 @@ object RepositoryModule {
     @Singleton
     fun provideNotesRepository(
         apiService: MentorApiService,
-        tokenDataStore: TokenDataStore
+        tokenDataStore: TokenDataStore,
+        noteDao: NoteDao
     ): NotesRepository {
-        return NotesRepositoryImpl(apiService, tokenDataStore)
+        return NotesRepositoryImpl(apiService, tokenDataStore, noteDao)
     }
 
     @Provides
     @Singleton
     fun provideEmotionRepository(
         apiService: MentorApiService,
-        tokenDataStore: TokenDataStore
+        tokenDataStore: TokenDataStore,
+        emotionDao: EmotionDao
     ): EmotionRepository {
-        return EmotionRepositoryImpl(apiService, tokenDataStore)
+        return EmotionRepositoryImpl(apiService, tokenDataStore, emotionDao)
     }
 
     @Provides
     @Singleton
     fun provideGratitudeRepository(
         apiService: MentorApiService,
-        tokenDataStore: TokenDataStore
+        tokenDataStore: TokenDataStore,
+        gratitudeDao: GratitudeDao
     ): GratitudeRepository {
-        return GratitudeRepositoryImpl(apiService, tokenDataStore)
+        return GratitudeRepositoryImpl(apiService, tokenDataStore, gratitudeDao)
     }
 }
