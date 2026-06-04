@@ -31,7 +31,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState.Success(user.userId)
                 },
                 onFailure = { error ->
-                    _uiState.value = AuthUiState.Error(error.message ?: "Login failed")
+                    _uiState.value = AuthUiState.Error(error.message ?: "Ошибка входа")
                 }
             )
         }
@@ -46,7 +46,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState.Success(user.userId)
                 },
                 onFailure = { error ->
-                    _uiState.value = AuthUiState.Error(error.message ?: "Registration failed")
+                    _uiState.value = AuthUiState.Error(error.message ?: "Ошибка регистрации")
                 }
             )
         }
