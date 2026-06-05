@@ -10,4 +10,8 @@ class GetEmotionsUseCase @Inject constructor(
     suspend operator fun invoke(): Result<List<Emotion>> {
         return emotionRepository.getEmotions()
     }
+
+    suspend fun getByDateRange(startDate: String, endDate: String): List<Emotion> {
+        return emotionRepository.getEmotionsByDateRange(startDate, endDate)
+    }
 }

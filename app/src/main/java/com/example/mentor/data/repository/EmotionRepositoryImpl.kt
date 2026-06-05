@@ -35,6 +35,19 @@ class EmotionRepositoryImpl(
         }
     }
 
+    override suspend fun getEmotions(): Result<List<Emotion>> {
+        return try {
+            val cached = emotionDao.getAllEmotions()
+            Result.success(cached.map { it.toDomain() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getEmotionsByDateRange(startDate: String, endDate: String): List<Emotion> {
+        return emotionDao.getEmotionsByDateRange(startDate, endDate).map { it.toDomain() }
+    }
+
     private fun Emotion.toEntity() = EmotionEntity(
         id = id,
         userId = userId,

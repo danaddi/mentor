@@ -11,6 +11,9 @@ interface EmotionDao {
     @Query("SELECT * FROM emotions ORDER BY createdAt DESC")
     suspend fun getAllEmotions(): List<EmotionEntity>
 
+    @Query("SELECT * FROM emotions WHERE createdAt >= :startDate AND createdAt <= :endDate ORDER BY createdAt DESC")
+    suspend fun getEmotionsByDateRange(startDate: String, endDate: String): List<EmotionEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEmotion(emotion: EmotionEntity)
 

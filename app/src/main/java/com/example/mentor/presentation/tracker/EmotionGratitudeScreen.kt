@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,7 @@ import com.example.mentor.presentation.emotion.EmotionViewModel
 import com.example.mentor.presentation.gratitude.GratitudeUiState
 import com.example.mentor.presentation.gratitude.GratitudeViewModel
 import com.example.mentor.ui.theme.EmotionAnger
+import com.example.mentor.ui.theme.EmotionDisgust
 import com.example.mentor.ui.theme.EmotionFear
 import com.example.mentor.ui.theme.EmotionJoy
 import com.example.mentor.ui.theme.EmotionNeutral
@@ -42,6 +44,10 @@ import com.example.mentor.ui.theme.EmotionSadness
 import com.example.mentor.ui.theme.EmotionSurprise
 import com.example.mentor.ui.theme.MentorPrimary
 import com.example.mentor.ui.theme.MentorTheme
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,12 +59,16 @@ fun EmotionGratitudeScreen(
     var showGratitudeDialog by remember { mutableStateOf(false) }
     val emotionUiState by emotionViewModel.uiState.collectAsState()
     val gratitudeUiState by gratitudeViewModel.uiState.collectAsState()
-    val allEmotions by emotionViewModel.emotions.collectAsState()
+    val filteredEmotions by emotionViewModel.filteredEmotions.collectAsState()
+    val startDate by emotionViewModel.startDate.collectAsState()
+    val endDate by emotionViewModel.endDate.collectAsState()
     val allGratitudes by gratitudeViewModel.gratitudes.collectAsState()
 
     EmotionGratitudeScreenContent(
-        emotions = allEmotions,
+        emotions = filteredEmotions,
         gratitudeEntries = allGratitudes,
+        startDate = startDate,
+        endDate = endDate,
         showEmotionDialog = showEmotionDialog,
         showGratitudeDialog = showGratitudeDialog,
         onAddEmotion = { showEmotionDialog = true },
@@ -72,6 +82,9 @@ fun EmotionGratitudeScreen(
         onConfirmEmotion = { emotion, intensity ->
             emotionViewModel.saveEmotion(emotion.apiName, intensity)
             showEmotionDialog = false
+        },
+        onDateRangeSelected = { start, end ->
+            emotionViewModel.setDateRange(start, end)
         }
     )
 }
@@ -81,6 +94,8 @@ fun EmotionGratitudeScreen(
 fun EmotionGratitudeScreenContent(
     emotions: List<Emotion>,
     gratitudeEntries: List<GratitudeEntry>,
+    startDate: LocalDate = LocalDate.now(),
+    endDate: LocalDate = LocalDate.now(),
     showEmotionDialog: Boolean = false,
     showGratitudeDialog: Boolean = false,
     onAddEmotion: () -> Unit = {},
@@ -88,8 +103,11 @@ fun EmotionGratitudeScreenContent(
     onDismissEmotionDialog: () -> Unit = {},
     onDismissGratitudeDialog: () -> Unit = {},
     onConfirmGratitude: (String) -> Unit = {},
-    onConfirmEmotion: (EmotionType, Int) -> Unit = { _, _ -> }
+    onConfirmEmotion: (EmotionType, Int) -> Unit = { _, _ -> },
+    onDateRangeSelected: (LocalDate, LocalDate) -> Unit = { _, _ -> }
 ) {
+    var showDatePicker by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -125,17 +143,10 @@ fun EmotionGratitudeScreenContent(
                 emotions = emotions
                     .groupBy { emotionTypeFromApiName(it.emotionType) }
                     .mapValues { (_, list) -> list.size }
-                    .toList()
-                    .ifEmpty {
-                        listOf(
-                            EmotionType.JOY to 3,
-                            EmotionType.SADNESS to 2,
-                            EmotionType.ANGER to 1,
-                            EmotionType.FEAR to 1,
-                            EmotionType.SURPRISE to 2,
-                            EmotionType.NEUTRAL to 4
-                        )
-                    }
+                    .toList(),
+                startDate = startDate,
+                endDate = endDate,
+                onDateRangeClick = { showDatePicker = true }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -160,18 +171,38 @@ fun EmotionGratitudeScreenContent(
             onConfirm = onConfirmGratitude
         )
     }
+
+    if (showDatePicker) {
+        DateRangePickerDialog(
+            startDate = startDate,
+            endDate = endDate,
+            onDismiss = { showDatePicker = false },
+            onConfirm = { start, end ->
+                onDateRangeSelected(start, end)
+                showDatePicker = false
+            }
+        )
+    }
 }
 
 @Composable
-fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
-    val safeEmotions = if (emotions.isEmpty()) listOf(EmotionType.NEUTRAL to 1) else emotions
-    val total = safeEmotions.sumOf { it.second }.coerceAtLeast(1)
+fun DonutChartSection(
+    emotions: List<Pair<EmotionType, Int>>,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    onDateRangeClick: () -> Unit
+) {
+    val safeEmotions = emotions.ifEmpty { listOf(EmotionType.NEUTRAL to 0) }
+    val totalCount = emotions.sumOf { it.second }
+    val chartTotal = totalCount.coerceAtLeast(1)
+    val dateRangeText = formatDateRange(startDate, endDate)
     val emotionColors = mapOf(
         EmotionType.JOY to EmotionJoy,
         EmotionType.SADNESS to EmotionSadness,
         EmotionType.ANGER to EmotionAnger,
         EmotionType.FEAR to EmotionFear,
         EmotionType.SURPRISE to EmotionSurprise,
+        EmotionType.DISGUST to EmotionDisgust,
         EmotionType.NEUTRAL to EmotionNeutral
     )
 
@@ -191,7 +222,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
                 var startAngle = -90f
 
                 safeEmotions.forEach { (emotion, count) ->
-                    val sweepAngle = (count.toFloat() / total) * 360f
+                    val sweepAngle = (count.toFloat() / chartTotal) * 360f
                     val color = emotionColors[emotion] ?: Color.Gray
 
                     drawArc(
@@ -215,12 +246,14 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Сегодня",
+                    text = dateRangeText,
                     fontSize = 14.sp,
-                    color = Color(0xFF8C8C8C)
+                    color = MentorPrimary,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable(onClick = onDateRangeClick)
                 )
                 Text(
-                    text = total.toString(),
+                    text = totalCount.toString(),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A)
@@ -238,7 +271,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
                 LegendItem(
                     color = emotionColors[emotion] ?: Color.Gray,
                     label = emotion.displayName,
-                    count = count
+                    percentage = calculatePercentage(count, totalCount)
                 )
             }
         }
@@ -253,7 +286,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
                 LegendItem(
                     color = emotionColors[emotion] ?: Color.Gray,
                     label = emotion.displayName,
-                    count = count
+                    percentage = calculatePercentage(count, totalCount)
                 )
             }
         }
@@ -261,7 +294,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
 }
 
 @Composable
-fun LegendItem(color: Color, label: String, count: Int) {
+fun LegendItem(color: Color, label: String, percentage: Int) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -272,7 +305,7 @@ fun LegendItem(color: Color, label: String, count: Int) {
                 .background(color, CircleShape)
         )
         Text(
-            text = "$label ($count)",
+            text = "$label ($percentage%)",
             fontSize = 12.sp,
             color = Color(0xFF8C8C8C)
         )
@@ -565,6 +598,80 @@ fun AddGratitudeDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DateRangePickerDialog(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate, LocalDate) -> Unit
+) {
+    val zoneId = ZoneId.systemDefault()
+    val dateRangePickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+        initialSelectedEndDateMillis = endDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val selectedStart = dateRangePickerState.selectedStartDateMillis?.toLocalDate(zoneId)
+                    val selectedEnd = dateRangePickerState.selectedEndDateMillis?.toLocalDate(zoneId)
+                    if (selectedStart != null && selectedEnd != null) {
+                        onConfirm(selectedStart, selectedEnd)
+                    }
+                },
+                enabled = dateRangePickerState.selectedStartDateMillis != null &&
+                    dateRangePickerState.selectedEndDateMillis != null
+            ) {
+                Text("Выбрать")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    ) {
+        DateRangePicker(
+            state = dateRangePickerState,
+            title = {
+                Text(
+                    text = "Выберите период",
+                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
+                )
+            },
+            showModeToggle = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(500.dp)
+        )
+    }
+}
+
+private fun formatDateRange(startDate: LocalDate, endDate: LocalDate): String {
+    if (startDate == LocalDate.now() && endDate == LocalDate.now()) {
+        return "Сегодня"
+    }
+
+    val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    return if (startDate == endDate) {
+        startDate.format(formatter)
+    } else {
+        "${startDate.format(formatter)} - ${endDate.format(formatter)}"
+    }
+}
+
+private fun calculatePercentage(count: Int, total: Int): Int {
+    return if (total == 0) 0 else (count.toFloat() / total * 100).toInt()
+}
+
+private fun Long.toLocalDate(zoneId: ZoneId): LocalDate {
+    return Instant.ofEpochMilli(this).atZone(zoneId).toLocalDate()
+}
+
 private fun emotionTypeFromApiName(apiName: String): EmotionType {
     return when (apiName.lowercase()) {
         EmotionType.JOY.apiName -> EmotionType.JOY
@@ -572,6 +679,7 @@ private fun emotionTypeFromApiName(apiName: String): EmotionType {
         EmotionType.ANGER.apiName -> EmotionType.ANGER
         EmotionType.FEAR.apiName -> EmotionType.FEAR
         EmotionType.SURPRISE.apiName -> EmotionType.SURPRISE
+        EmotionType.DISGUST.apiName -> EmotionType.DISGUST
         EmotionType.NEUTRAL.apiName -> EmotionType.NEUTRAL
         else -> EmotionType.NEUTRAL
     }
@@ -598,7 +706,8 @@ private fun EmotionGratitudeScreenPreview() {
             onDismissEmotionDialog = {},
             onDismissGratitudeDialog = {},
             onConfirmGratitude = {},
-            onConfirmEmotion = { _, _ -> }
+            onConfirmEmotion = { _, _ -> },
+            onDateRangeSelected = { _, _ -> }
         )
     }
 }
