@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.mentor.ui.theme.MentorOutlineAccent
 import com.example.mentor.ui.theme.MentorPrimary
 import com.example.mentor.ui.theme.MentorTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -38,10 +40,17 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiState) {
         if (uiState is ProfileUiState.LoggedOut) {
             onLogout()
+        }
+        if (uiState is ProfileUiState.Error) {
+            snackbarHostState.showSnackbar(
+                message = (uiState as ProfileUiState.Error).message
+            )
         }
     }
 
@@ -62,7 +71,8 @@ fun ProfileScreen(
         userName = userName,
         userEmail = userEmail,
         onLogout = { viewModel.logout() },
-        onDeleteAccount = { showDeleteDialog = true }
+        onDeleteAccount = { showDeleteDialog = true },
+        snackbarHostState = snackbarHostState
     )
 
     if (showDeleteDialog) {
@@ -101,7 +111,8 @@ fun ProfileScreenContent(
     userName: String,
     userEmail: String,
     onLogout: () -> Unit,
-    onDeleteAccount: () -> Unit
+    onDeleteAccount: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     Box(
         modifier = Modifier
@@ -260,6 +271,11 @@ fun ProfileScreenContent(
                 }
             }
         }
+        
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -271,7 +287,8 @@ private fun ProfileScreenPreview() {
             userName = "Иван",
             userEmail = "user@example.com",
             onLogout = {},
-            onDeleteAccount = {}
+            onDeleteAccount = {},
+            snackbarHostState = remember { SnackbarHostState() }
         )
     }
 }

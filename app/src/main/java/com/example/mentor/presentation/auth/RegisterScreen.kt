@@ -85,7 +85,7 @@ fun RegisterScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(30.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFFFFFFFF)
                         ),
@@ -97,7 +97,7 @@ fun RegisterScreen(
                             placeholder = { Text("Имя", color = Color(0xFF8C8C8C)) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -109,11 +109,13 @@ fun RegisterScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(30.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFFFFFFFF)
                         ),
@@ -126,7 +128,7 @@ fun RegisterScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -138,12 +140,14 @@ fun RegisterScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
                             .clickable { showGenderDropdown = true },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(30.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFFFFFFFF)
                         ),
@@ -179,7 +183,7 @@ fun RegisterScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(30.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFFFFFFFF)
                         ),
@@ -193,7 +197,7 @@ fun RegisterScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -205,11 +209,13 @@ fun RegisterScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(30.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFFFFFFFF)
                         ),
@@ -223,7 +229,7 @@ fun RegisterScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -250,7 +256,7 @@ fun RegisterScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(30.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF6D5F57),
                         contentColor = Color.White
@@ -369,10 +375,12 @@ fun RegisterScreen(
         Dialog(onDismissRequest = { showGenderDropdown = false }) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(30.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier
+                    .background(Color(0xFFF5EDE8))
+                    .padding(16.dp)
                 ) {
                     listOf("Мужской", "Женский").forEach { gender ->
                         Text(
