@@ -22,15 +22,26 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mentor.domain.model.Emotion
 import com.example.mentor.domain.model.EmotionType
+import com.example.mentor.domain.model.GratitudeEntry
+import com.example.mentor.presentation.emotion.EmotionUiState
 import com.example.mentor.presentation.emotion.EmotionViewModel
+import com.example.mentor.presentation.gratitude.GratitudeUiState
 import com.example.mentor.presentation.gratitude.GratitudeViewModel
-import com.example.mentor.ui.theme.*
+import com.example.mentor.ui.theme.EmotionAnger
+import com.example.mentor.ui.theme.EmotionFear
+import com.example.mentor.ui.theme.EmotionJoy
+import com.example.mentor.ui.theme.EmotionNeutral
+import com.example.mentor.ui.theme.EmotionSadness
+import com.example.mentor.ui.theme.EmotionSurprise
+import com.example.mentor.ui.theme.MentorPrimary
+import com.example.mentor.ui.theme.MentorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +53,43 @@ fun EmotionGratitudeScreen(
     var showGratitudeDialog by remember { mutableStateOf(false) }
     val emotionUiState by emotionViewModel.uiState.collectAsState()
     val gratitudeUiState by gratitudeViewModel.uiState.collectAsState()
+    val allEmotions by emotionViewModel.emotions.collectAsState()
+    val allGratitudes by gratitudeViewModel.gratitudes.collectAsState()
 
+    EmotionGratitudeScreenContent(
+        emotions = allEmotions,
+        gratitudeEntries = allGratitudes,
+        showEmotionDialog = showEmotionDialog,
+        showGratitudeDialog = showGratitudeDialog,
+        onAddEmotion = { showEmotionDialog = true },
+        onAddGratitude = { showGratitudeDialog = true },
+        onDismissEmotionDialog = { showEmotionDialog = false },
+        onDismissGratitudeDialog = { showGratitudeDialog = false },
+        onConfirmGratitude = { content ->
+            gratitudeViewModel.saveGratitude(content)
+            showGratitudeDialog = false
+        },
+        onConfirmEmotion = { emotion, intensity ->
+            emotionViewModel.saveEmotion(emotion.apiName, intensity)
+            showEmotionDialog = false
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EmotionGratitudeScreenContent(
+    emotions: List<Emotion>,
+    gratitudeEntries: List<GratitudeEntry>,
+    showEmotionDialog: Boolean = false,
+    showGratitudeDialog: Boolean = false,
+    onAddEmotion: () -> Unit = {},
+    onAddGratitude: () -> Unit = {},
+    onDismissEmotionDialog: () -> Unit = {},
+    onDismissGratitudeDialog: () -> Unit = {},
+    onConfirmGratitude: (String) -> Unit = {},
+    onConfirmEmotion: (EmotionType, Int) -> Unit = { _, _ -> }
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -55,7 +102,7 @@ fun EmotionGratitudeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showEmotionDialog = true },
+                onClick = onAddEmotion,
                 containerColor = MentorPrimary,
                 modifier = Modifier.size(56.dp)
             ) {
@@ -74,56 +121,51 @@ fun EmotionGratitudeScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Donut chart section
             DonutChartSection(
-                emotions = listOf(
-                    EmotionType.JOY to 3,
-                    EmotionType.SADNESS to 2,
-                    EmotionType.ANGER to 1,
-                    EmotionType.FEAR to 1,
-                    EmotionType.SURPRISE to 2,
-                    EmotionType.NEUTRAL to 4
-                )
+                emotions = emotions
+                    .groupBy { emotionTypeFromApiName(it.emotionType) }
+                    .mapValues { (_, list) -> list.size }
+                    .toList()
+                    .ifEmpty {
+                        listOf(
+                            EmotionType.JOY to 3,
+                            EmotionType.SADNESS to 2,
+                            EmotionType.ANGER to 1,
+                            EmotionType.FEAR to 1,
+                            EmotionType.SURPRISE to 2,
+                            EmotionType.NEUTRAL to 4
+                        )
+                    }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Gratitude section
             GratitudeSection(
-                gratitudes = if (gratitudeUiState is com.example.mentor.presentation.gratitude.GratitudeUiState.Success) {
-                    listOf((gratitudeUiState as com.example.mentor.presentation.gratitude.GratitudeUiState.Success).gratitude)
-                } else emptyList(),
-                onAddGratitude = { showGratitudeDialog = true }
+                gratitudes = gratitudeEntries,
+                onAddGratitude = onAddGratitude
             )
         }
     }
 
-    // Emotion dialog
     if (showEmotionDialog) {
         AddEmotionDialog(
-            onDismiss = { showEmotionDialog = false },
-            onConfirm = { emotion, intensity ->
-                emotionViewModel.saveEmotion(emotion.apiName, intensity)
-                showEmotionDialog = false
-            }
+            onDismiss = onDismissEmotionDialog,
+            onConfirm = onConfirmEmotion
         )
     }
 
-    // Gratitude dialog
     if (showGratitudeDialog) {
         AddGratitudeDialog(
-            onDismiss = { showGratitudeDialog = false },
-            onConfirm = { content ->
-                gratitudeViewModel.saveGratitude(content)
-                showGratitudeDialog = false
-            }
+            onDismiss = onDismissGratitudeDialog,
+            onConfirm = onConfirmGratitude
         )
     }
 }
 
 @Composable
 fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
-    val total = emotions.sumOf { it.second }
+    val safeEmotions = if (emotions.isEmpty()) listOf(EmotionType.NEUTRAL to 1) else emotions
+    val total = safeEmotions.sumOf { it.second }.coerceAtLeast(1)
     val emotionColors = mapOf(
         EmotionType.JOY to EmotionJoy,
         EmotionType.SADNESS to EmotionSadness,
@@ -137,7 +179,6 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Donut chart
         Box(
             modifier = Modifier.size(200.dp),
             contentAlignment = Alignment.Center
@@ -149,7 +190,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
 
                 var startAngle = -90f
 
-                emotions.forEach { (emotion, count) ->
+                safeEmotions.forEach { (emotion, count) ->
                     val sweepAngle = (count.toFloat() / total) * 360f
                     val color = emotionColors[emotion] ?: Color.Gray
 
@@ -170,7 +211,6 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
                 }
             }
 
-            // Center text
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -190,12 +230,11 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Legend
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            emotions.take(3).forEach { (emotion, count) ->
+            safeEmotions.take(3).forEach { (emotion, count) ->
                 LegendItem(
                     color = emotionColors[emotion] ?: Color.Gray,
                     label = emotion.displayName,
@@ -210,7 +249,7 @@ fun DonutChartSection(emotions: List<Pair<EmotionType, Int>>) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            emotions.drop(3).take(3).forEach { (emotion, count) ->
+            safeEmotions.drop(3).take(3).forEach { (emotion, count) ->
                 LegendItem(
                     color = emotionColors[emotion] ?: Color.Gray,
                     label = emotion.displayName,
@@ -242,13 +281,12 @@ fun LegendItem(color: Color, label: String, count: Int) {
 
 @Composable
 fun GratitudeSection(
-    gratitudes: List<com.example.mentor.domain.model.GratitudeEntry>,
+    gratitudes: List<GratitudeEntry>,
     onAddGratitude: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -288,7 +326,6 @@ fun GratitudeSection(
             }
         }
 
-        // Horizontal scrolling list
         if (gratitudes.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -321,7 +358,7 @@ fun GratitudeSection(
 }
 
 @Composable
-fun GratitudeCard(gratitude: com.example.mentor.domain.model.GratitudeEntry) {
+fun GratitudeCard(gratitude: GratitudeEntry) {
     Card(
         modifier = Modifier
             .width(200.dp)
@@ -376,7 +413,6 @@ fun AddEmotionDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Emotion selection
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -406,12 +442,16 @@ fun AddEmotionDialog(
                                         if (selectedEmotion == emotion) Color.White else Color.Transparent,
                                         CircleShape
                                     )
+                                    .border(
+                                        1.dp,
+                                        if (selectedEmotion == emotion) Color.White else Color(0xFF8C8C8C),
+                                        CircleShape
+                                    )
                             )
                         }
                     }
                 }
 
-                // Intensity slider
                 Text(
                     text = "Интенсивность: $intensity",
                     fontSize = 14.sp,
@@ -522,5 +562,43 @@ fun AddGratitudeDialog(
                 }
             }
         }
+    }
+}
+
+private fun emotionTypeFromApiName(apiName: String): EmotionType {
+    return when (apiName.lowercase()) {
+        EmotionType.JOY.apiName -> EmotionType.JOY
+        EmotionType.SADNESS.apiName -> EmotionType.SADNESS
+        EmotionType.ANGER.apiName -> EmotionType.ANGER
+        EmotionType.FEAR.apiName -> EmotionType.FEAR
+        EmotionType.SURPRISE.apiName -> EmotionType.SURPRISE
+        EmotionType.NEUTRAL.apiName -> EmotionType.NEUTRAL
+        else -> EmotionType.NEUTRAL
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Emotion Gratitude Screen")
+@Composable
+private fun EmotionGratitudeScreenPreview() {
+    MentorTheme {
+        EmotionGratitudeScreenContent(
+            emotions = listOf(
+                Emotion("1", "user1", "joy", 8, "2024-01-15T10:00:00Z"),
+                Emotion("2", "user1", "sadness", 4, "2024-01-15T11:00:00Z"),
+                Emotion("3", "user1", "neutral", 5, "2024-01-15T12:00:00Z")
+            ),
+            gratitudeEntries = listOf(
+                GratitudeEntry("1", "user1", "Благодарен за поддержку друзей", "2024-01-15T10:00:00Z"),
+                GratitudeEntry("2", "user1", "Рад новому дню и возможностям", "2024-01-16T09:00:00Z")
+            ),
+            showEmotionDialog = false,
+            showGratitudeDialog = false,
+            onAddEmotion = {},
+            onAddGratitude = {},
+            onDismissEmotionDialog = {},
+            onDismissGratitudeDialog = {},
+            onConfirmGratitude = {},
+            onConfirmEmotion = { _, _ -> }
+        )
     }
 }

@@ -34,6 +34,15 @@ class GratitudeRepositoryImpl(
         }
     }
 
+    override suspend fun getGratitudes(): Result<List<GratitudeEntry>> {
+        return try {
+            val cached = gratitudeDao.getAllGratitudes()
+            Result.success(cached.map { it.toDomain() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun GratitudeEntry.toEntity() = GratitudeEntity(
         id = id,
         userId = userId,
