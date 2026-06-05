@@ -1,5 +1,6 @@
 package com.example.mentor.data.repository
 
+import com.example.mentor.data.local.MentorDatabase
 import com.example.mentor.data.local.TokenDataStore
 import com.example.mentor.data.remote.api.MentorApiService
 import com.example.mentor.data.remote.dto.LoginRequest
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.first
 
 class AuthRepositoryImpl(
     private val apiService: MentorApiService,
-    private val tokenDataStore: TokenDataStore
+    private val tokenDataStore: TokenDataStore,
+    private val database: MentorDatabase
 ) : AuthRepository {
 
     override suspend fun register(name: String, email: String, password: String): Result<User> {
@@ -70,6 +72,12 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout() {
+        // Clear all local cached data
+        try {
+            database.noteDao().deleteAllNotes()
+            database.emotionDao().deleteAllEmotions()
+            database.gratitudeDao().deleteAllGratitudes()
+        } catch (_: Exception) { }
         tokenDataStore.clearToken()
     }
 
@@ -77,6 +85,10 @@ class AuthRepositoryImpl(
         return try {
             val token = tokenDataStore.token.first() ?: throw Exception("Not authenticated")
             apiService.deleteAccount(token)
+            // Clear all local data
+            database.noteDao().deleteAllNotes()
+            database.emotionDao().deleteAllEmotions()
+            database.gratitudeDao().deleteAllGratitudes()
             tokenDataStore.clearToken()
             Result.success(Unit)
         } catch (e: ClientRequestException) {
