@@ -13,11 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mentor.domain.model.Note
 import com.example.mentor.ui.theme.MentorPrimary
+import com.example.mentor.ui.theme.MentorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +61,6 @@ fun NotesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -80,14 +82,7 @@ fun NotesScreen(
             )
 
             when (val state = uiState) {
-                is NotesUiState.Initial -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
+                is NotesUiState.Initial,
                 is NotesUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -96,12 +91,13 @@ fun NotesScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is NotesUiState.Success -> {
                     val filteredNotes = if (searchQuery.isBlank()) {
                         state.notes
                     } else {
-                        state.notes.filter { 
-                            it.content.contains(searchQuery, ignoreCase = true) 
+                        state.notes.filter {
+                            it.content.contains(searchQuery, ignoreCase = true)
                         }
                     }
 
@@ -128,6 +124,7 @@ fun NotesScreen(
                         }
                     }
                 }
+
                 is NotesUiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -162,8 +159,110 @@ fun NotesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteItem(note: com.example.mentor.domain.model.Note) {
+fun NotesScreenContent(
+    notes: List<Note>,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    onCreateNote: () -> Unit,
+    showCreateDialog: Boolean = false,
+    onConfirmCreate: (String) -> Unit = {},
+    onDismissDialog: () -> Unit = {}
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Заметки") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = Color(0xFF1A1A1A)
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreateNote,
+                containerColor = MentorPrimary,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Добавить заметку",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text("Поиск по заметкам") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search")
+                },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = MentorPrimary,
+                    unfocusedIndicatorColor = Color(0xFF8C8C8C)
+                )
+            )
+
+            val filteredNotes = if (searchQuery.isBlank()) {
+                notes
+            } else {
+                notes.filter {
+                    it.content.contains(searchQuery, ignoreCase = true)
+                }
+            }
+
+            if (filteredNotes.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotBlank()) "Ничего не найдено" else "Заметок пока нет",
+                        fontSize = 16.sp,
+                        color = Color(0xFF8C8C8C)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredNotes) { note ->
+                        NoteItem(note = note)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        AddNoteDialog(
+            onDismiss = onDismissDialog,
+            onConfirm = onConfirmCreate
+        )
+    }
+}
+
+@Composable
+fun NoteItem(note: Note) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -260,5 +359,25 @@ fun AddNoteDialog(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Notes Screen")
+@Composable
+private fun NotesScreenPreview() {
+    MentorTheme {
+        NotesScreenContent(
+            notes = listOf(
+                Note("1", "user1", null, "Важная мысль о медитации и осознанности", "2024-01-15T10:00:00Z"),
+                Note("2", "user1", "session1", "Разговор с ИИ помог мне понять свои эмоции", "2024-01-16T14:00:00Z"),
+                Note("3", "user1", null, "Сегодня хороший день", "2024-01-17T09:00:00Z")
+            ),
+            searchQuery = "",
+            onSearchChange = {},
+            onCreateNote = {},
+            showCreateDialog = false,
+            onConfirmCreate = {},
+            onDismissDialog = {}
+        )
     }
 }
