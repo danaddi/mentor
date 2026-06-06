@@ -3,6 +3,7 @@ package com.example.mentor.presentation.emotion
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mentor.domain.model.Emotion
+import com.example.mentor.domain.model.EmotionType
 import com.example.mentor.domain.usecase.GetEmotionsUseCase
 import com.example.mentor.domain.usecase.SaveEmotionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,7 +11,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,14 +48,12 @@ class EmotionViewModel @Inject constructor(
 
     fun loadEmotions() {
         viewModelScope.launch {
-            val result = getEmotionsUseCase()
-            result.fold(
-                onSuccess = { entries ->
-                    _emotions.value = entries
-                },
-                onFailure = { /* silently fail, list stays empty */ }
-            )
+            loadEmotionsInternal()
         }
+    }
+
+    fun saveEmotion(emotionType: EmotionType, intensity: Int = 5) {
+        saveEmotion(emotionType.apiName, intensity)
     }
 
     fun saveEmotion(emotionType: String, intensity: Int) {
@@ -60,9 +63,8 @@ class EmotionViewModel @Inject constructor(
             result.fold(
                 onSuccess = { emotion ->
                     _uiState.value = EmotionUiState.Success(emotion)
-                    // Add to the list
-                    _emotions.value = listOf(emotion) + _emotions.value
-                    setDateRange(_startDate.value, _endDate.value)
+                    loadEmotionsInternal()
+                    updateFilteredEmotions(_startDate.value, _endDate.value)
                 },
                 onFailure = { error ->
                     _uiState.value = EmotionUiState.Error(error.message ?: "Failed to save emotion")
@@ -71,15 +73,37 @@ class EmotionViewModel @Inject constructor(
         }
     }
 
+    private suspend fun loadEmotionsInternal() {
+        val result = getEmotionsUseCase()
+        result.fold(
+            onSuccess = { entries ->
+                _emotions.value = entries
+                updateFilteredEmotions(_startDate.value, _endDate.value)
+            },
+            onFailure = { /* silently fail, list stays empty */ }
+        )
+    }
+
     fun setDateRange(start: LocalDate, end: LocalDate) {
         viewModelScope.launch {
             _startDate.value = start
             _endDate.value = end
-
-            val startIso = "${start}T00:00:00Z"
-            val endIso = "${end}T23:59:59Z"
-            _filteredEmotions.value = getEmotionsUseCase.getByDateRange(startIso, endIso)
+            updateFilteredEmotions(start, end)
         }
+    }
+
+    private fun updateFilteredEmotions(start: LocalDate, end: LocalDate) {
+        _filteredEmotions.value = _emotions.value.filter { emotion ->
+            val createdDate = emotion.createdAt.toLocalDateOrNull() ?: return@filter false
+            !createdDate.isBefore(start) && !createdDate.isAfter(end)
+        }
+    }
+
+    private fun String.toLocalDateOrNull(): LocalDate? {
+        return runCatching { Instant.parse(this).atZone(ZoneId.systemDefault()).toLocalDate() }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(this).toLocalDate() }.getOrNull()
+            ?: runCatching { LocalDateTime.parse(this).toLocalDate() }.getOrNull()
+            ?: runCatching { LocalDate.parse(take(10)) }.getOrNull()
     }
 
     fun resetState() {

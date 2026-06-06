@@ -11,9 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,24 +64,30 @@ fun EmotionGratitudeScreen(
     val endDate by emotionViewModel.endDate.collectAsState()
     val allGratitudes by gratitudeViewModel.gratitudes.collectAsState()
 
+    // Refresh emotions when screen is focused
+    LaunchedEffect(Unit) {
+        emotionViewModel.loadEmotions()
+        emotionViewModel.setDateRange(startDate, endDate)
+    }
+
     EmotionGratitudeScreenContent(
         emotions = filteredEmotions,
         gratitudeEntries = allGratitudes,
         startDate = startDate,
         endDate = endDate,
-        showEmotionDialog = showEmotionDialog,
         showGratitudeDialog = showGratitudeDialog,
+        showEmotionDialog = showEmotionDialog,
         onAddEmotion = { showEmotionDialog = true },
         onAddGratitude = { showGratitudeDialog = true },
         onDismissEmotionDialog = { showEmotionDialog = false },
+        onConfirmEmotion = { emotionType, intensity ->
+            emotionViewModel.saveEmotion(emotionType, intensity)
+            showEmotionDialog = false
+        },
         onDismissGratitudeDialog = { showGratitudeDialog = false },
         onConfirmGratitude = { content ->
             gratitudeViewModel.saveGratitude(content)
             showGratitudeDialog = false
-        },
-        onConfirmEmotion = { emotion, intensity ->
-            emotionViewModel.saveEmotion(emotion.apiName, intensity)
-            showEmotionDialog = false
         },
         onDateRangeSelected = { start, end ->
             emotionViewModel.setDateRange(start, end)
@@ -102,8 +108,8 @@ fun EmotionGratitudeScreenContent(
     onAddGratitude: () -> Unit = {},
     onDismissEmotionDialog: () -> Unit = {},
     onDismissGratitudeDialog: () -> Unit = {},
-    onConfirmGratitude: (String) -> Unit = {},
     onConfirmEmotion: (EmotionType, Int) -> Unit = { _, _ -> },
+    onConfirmGratitude: (String) -> Unit = {},
     onDateRangeSelected: (LocalDate, LocalDate) -> Unit = { _, _ -> }
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -111,26 +117,27 @@ fun EmotionGratitudeScreenContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Трекер") },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Трекер")
+                        IconButton(onClick = onAddEmotion) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Добавить эмоцию",
+                                tint = MentorPrimary
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White,
                     titleContentColor = Color(0xFF1A1A1A)
                 )
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddEmotion,
-                containerColor = MentorPrimary,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Добавить эмоцию",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
         }
     ) { paddingValues ->
         Column(
@@ -157,6 +164,7 @@ fun EmotionGratitudeScreenContent(
             )
         }
     }
+
 
     if (showEmotionDialog) {
         AddEmotionDialog(
@@ -323,6 +331,7 @@ fun GratitudeSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .wrapContentHeight()
                 .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -352,8 +361,8 @@ fun GratitudeSection(
 
             IconButton(onClick = onAddGratitude) {
                 Icon(
-                    Icons.Default.ArrowForward,
-                    contentDescription = "View all",
+                    Icons.Default.Add,
+                    contentDescription = "Добавить благодарность",
                     tint = MentorPrimary
                 )
             }
@@ -367,9 +376,9 @@ fun GratitudeSection(
                     .border(
                         width = 1.dp,
                         color = Color(0xFFF5F5F5),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(30.dp)
                     )
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(30.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -396,7 +405,7 @@ fun GratitudeCard(gratitude: GratitudeEntry) {
         modifier = Modifier
             .width(200.dp)
             .height(120.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
@@ -434,7 +443,7 @@ fun AddEmotionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(30.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -464,7 +473,7 @@ fun AddEmotionDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = emotion.displayName,
+                                text = emotion.dialogDisplayName(),
                                 color = if (selectedEmotion == emotion) Color.White else Color(0xFF1A1A1A),
                                 fontSize = 14.sp
                             )
@@ -539,7 +548,7 @@ fun AddGratitudeDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(30.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -672,6 +681,18 @@ private fun Long.toLocalDate(zoneId: ZoneId): LocalDate {
     return Instant.ofEpochMilli(this).atZone(zoneId).toLocalDate()
 }
 
+private fun EmotionType.dialogDisplayName(): String {
+    return when (this) {
+        EmotionType.JOY -> "Радость"
+        EmotionType.SADNESS -> "Грусть"
+        EmotionType.ANGER -> "Злость"
+        EmotionType.FEAR -> "Страх"
+        EmotionType.SURPRISE -> "Удивление"
+        EmotionType.DISGUST -> "Отвращение"
+        EmotionType.NEUTRAL -> "Спокойствие"
+    }
+}
+
 private fun emotionTypeFromApiName(apiName: String): EmotionType {
     return when (apiName.lowercase()) {
         EmotionType.JOY.apiName -> EmotionType.JOY
@@ -705,8 +726,8 @@ private fun EmotionGratitudeScreenPreview() {
             onAddGratitude = {},
             onDismissEmotionDialog = {},
             onDismissGratitudeDialog = {},
-            onConfirmGratitude = {},
             onConfirmEmotion = { _, _ -> },
+            onConfirmGratitude = {},
             onDateRangeSelected = { _, _ -> }
         )
     }

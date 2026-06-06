@@ -188,7 +188,9 @@ fun MainScreen(rootNavController: androidx.navigation.NavController) {
                 )
             }
             composable(Routes.NOTES) { NotesScreen() }
-            composable(Routes.TRACKER) { EmotionGratitudeScreen() }
+            composable(Routes.TRACKER) {
+                EmotionGratitudeScreen()
+            }
             composable(Routes.PROFILE) { 
                 ProfileScreen(
                     onLogout = {

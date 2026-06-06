@@ -18,6 +18,7 @@ import com.example.mentor.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmotionScreen(
+    onNavigateBack: () -> Unit,
     viewModel: EmotionViewModel = hiltViewModel()
 ) {
     var selectedEmotion by remember { mutableStateOf<EmotionType?>(null) }
