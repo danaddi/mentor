@@ -1,6 +1,8 @@
 package com.example.mentor.data.repository
 
 import com.example.mentor.data.local.TokenDataStore
+import com.example.mentor.data.local.dao.MessageDao
+import com.example.mentor.data.local.entity.MessageEntity
 import com.example.mentor.data.remote.api.MentorApiService
 import com.example.mentor.data.remote.dto.CreateSessionRequest
 import com.example.mentor.data.remote.dto.SendMessageRequest
@@ -11,7 +13,8 @@ import kotlinx.coroutines.flow.first
 
 class ChatRepositoryImpl(
     private val apiService: MentorApiService,
-    private val tokenDataStore: TokenDataStore
+    private val tokenDataStore: TokenDataStore,
+    private val messageDao: MessageDao
 ) : ChatRepository {
 
     override suspend fun createSession(sectionType: String): Result<ChatSession> {
@@ -19,13 +22,14 @@ class ChatRepositoryImpl(
             val token = tokenDataStore.token.first() ?: throw Exception("Not authenticated")
             val request = CreateSessionRequest(sectionType)
             val response = apiService.createSession(token, request)
-            Result.success(
-                ChatSession(
-                    id = response.sessionId,
-                    sectionType = response.sectionType,
-                    createdAt = response.createdAt
-                )
+            
+            val session = ChatSession(
+                id = response.sessionId,
+                sectionType = response.sectionType,
+                createdAt = response.createdAt
             )
+            
+            Result.success(session)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -55,6 +59,14 @@ class ChatRepositoryImpl(
             val request = SendMessageRequest(content)
             val response = apiService.sendMessage(token, sessionId, request)
             
+            // Validate response content
+            if (response.userMessage.content.isBlank()) {
+                throw Exception("User message content is empty")
+            }
+            if (response.aiMessage.content.isBlank()) {
+                throw Exception("AI message content is empty")
+            }
+            
             val userMessage = Message(
                 id = response.userMessage.id,
                 role = response.userMessage.role,
@@ -69,7 +81,46 @@ class ChatRepositoryImpl(
                 createdAt = response.aiMessage.createdAt
             )
             
+            // Cache messages in local database
+            try {
+                val userMessageEntity = MessageEntity(
+                    id = userMessage.id,
+                    sessionId = sessionId,
+                    role = userMessage.role,
+                    content = userMessage.content,
+                    createdAt = userMessage.createdAt
+                )
+                val aiMessageEntity = MessageEntity(
+                    id = aiMessage.id,
+                    sessionId = sessionId,
+                    role = aiMessage.role,
+                    content = aiMessage.content,
+                    createdAt = aiMessage.createdAt
+                )
+                messageDao.insertMessages(listOf(userMessageEntity, aiMessageEntity))
+            } catch (e: Exception) {
+                // Log caching error but don't fail the operation
+                println("Failed to cache messages: ${e.message}")
+            }
+            
             Result.success(Pair(userMessage, aiMessage))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getMessages(sessionId: String): Result<List<Message>> {
+        return try {
+            val cachedMessages = messageDao.getMessagesBySessionIdSync(sessionId)
+            val messages = cachedMessages.map { entity ->
+                Message(
+                    id = entity.id,
+                    role = entity.role,
+                    content = entity.content,
+                    createdAt = entity.createdAt
+                )
+            }
+            Result.success(messages)
         } catch (e: Exception) {
             Result.failure(e)
         }

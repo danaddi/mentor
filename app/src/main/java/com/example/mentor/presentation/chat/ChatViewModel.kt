@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mentor.domain.model.Message
 import com.example.mentor.domain.usecase.CreateChatSessionUseCase
+import com.example.mentor.domain.usecase.GetMessagesUseCase
 import com.example.mentor.domain.usecase.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val createChatSessionUseCase: CreateChatSessionUseCase,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val getMessagesUseCase: GetMessagesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChatUiState>(ChatUiState.Initial)
@@ -30,10 +32,25 @@ class ChatViewModel @Inject constructor(
             result.fold(
                 onSuccess = { session ->
                     currentSessionId = session.id
-                    _uiState.value = ChatUiState.ChatReady(session.id, emptyList())
+                    loadMessages(session.id)
                 },
                 onFailure = { error ->
                     _uiState.value = ChatUiState.Error(error.message ?: "Failed to create session")
+                }
+            )
+        }
+    }
+
+    private fun loadMessages(sessionId: String) {
+        viewModelScope.launch {
+            val result = getMessagesUseCase(sessionId)
+            result.fold(
+                onSuccess = { messages ->
+                    _uiState.value = ChatUiState.ChatReady(sessionId, messages)
+                },
+                onFailure = { error ->
+                    // If loading cached messages fails, start with empty list
+                    _uiState.value = ChatUiState.ChatReady(sessionId, emptyList())
                 }
             )
         }
@@ -45,15 +62,28 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             val currentMessages = (_uiState.value as? ChatUiState.ChatReady)?.messages ?: emptyList()
-            _uiState.value = ChatUiState.ChatReady(sessionId, currentMessages)
+            
+            // Create optimistic user message
+            val optimisticUserMessage = Message(
+                id = "temp_${System.currentTimeMillis()}",
+                role = "user",
+                content = content,
+                createdAt = java.time.Instant.now().toString()
+            )
+            
+            // Show loading state with optimistic message
+            _uiState.value = ChatUiState.ChatReady(sessionId, currentMessages + optimisticUserMessage)
 
             val result = sendMessageUseCase(sessionId, content)
             result.fold(
                 onSuccess = { (userMessage, aiMessage) ->
+                    // Replace optimistic message with real one and add AI response
                     val updatedMessages = currentMessages + userMessage + aiMessage
                     _uiState.value = ChatUiState.ChatReady(sessionId, updatedMessages)
                 },
                 onFailure = { error ->
+                    // Remove optimistic message and show error
+                    _uiState.value = ChatUiState.ChatReady(sessionId, currentMessages)
                     _uiState.value = ChatUiState.Error(error.message ?: "Failed to send message")
                 }
             )

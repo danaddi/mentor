@@ -6,6 +6,7 @@ import com.example.mentor.data.local.MentorDatabase
 import com.example.mentor.data.local.TokenDataStore
 import com.example.mentor.data.local.dao.EmotionDao
 import com.example.mentor.data.local.dao.GratitudeDao
+import com.example.mentor.data.local.dao.MessageDao
 import com.example.mentor.data.local.dao.NoteDao
 import com.example.mentor.data.remote.api.MentorApiService
 import dagger.Module
@@ -63,7 +64,8 @@ object AppModule {
             context,
             MentorDatabase::class.java,
             "mentor_database"
-        ).build()
+        ).fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
@@ -82,5 +84,11 @@ object AppModule {
     @Singleton
     fun provideGratitudeDao(database: MentorDatabase): GratitudeDao {
         return database.gratitudeDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: MentorDatabase): MessageDao {
+        return database.messageDao()
     }
 }

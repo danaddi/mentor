@@ -7,4 +7,5 @@ interface ChatRepository {
     suspend fun createSession(sectionType: String): Result<ChatSession>
     suspend fun getSessions(): Result<List<ChatSession>>
     suspend fun sendMessage(sessionId: String, content: String): Result<Pair<Message, Message>>
+    suspend fun getMessages(sessionId: String): Result<List<Message>>
 }
