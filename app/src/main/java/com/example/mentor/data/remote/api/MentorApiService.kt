@@ -3,6 +3,7 @@ package com.example.mentor.data.remote.api
 import com.example.mentor.data.remote.dto.*
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.request.delete
 import io.ktor.client.request.*
 import io.ktor.http.*
 import javax.inject.Inject
@@ -82,4 +83,11 @@ class MentorApiService @Inject constructor(
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
+
+    // Delete Account
+    suspend fun deleteAccount(token: String) {
+        client.delete("$BASE_URL/auth/account") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
 }
