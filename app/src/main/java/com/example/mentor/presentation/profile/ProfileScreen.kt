@@ -32,7 +32,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.mentor.ui.theme.MentorOutlineAccent
 import com.example.mentor.ui.theme.MentorPrimary
 import com.example.mentor.ui.theme.MentorTheme
-import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(

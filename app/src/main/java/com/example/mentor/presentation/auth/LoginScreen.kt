@@ -38,19 +38,6 @@ fun LoginScreen(
         }
     }
 
-    // Show error message
-    if (uiState is AuthUiState.Error) {
-        Text(
-            text = (uiState as AuthUiState.Error).message,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -101,7 +88,7 @@ fun LoginScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(8.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -112,6 +99,8 @@ fun LoginScreen(
                             )
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Card(
                         modifier = Modifier
@@ -131,7 +120,7 @@ fun LoginScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(8.dp),
+                                .padding(0.dp),
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -140,6 +129,18 @@ fun LoginScreen(
                                 unfocusedIndicatorColor = Color.Transparent,
                                 cursorColor = MentorPrimary
                             )
+                        )
+                    }
+
+                    val errorMessage = (uiState as? AuthUiState.Error)?.message
+                    if (!errorMessage.isNullOrEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
