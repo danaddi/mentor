@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -139,14 +140,22 @@ fun EmotionGratitudeScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "Трекер",
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     color = MentorPrimary
                 )
+                IconButton(onClick = onAddGratitude) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Добавить эмоцию",
+                        tint = MentorPrimary
+                    )
+                }
             }
 
             DonutChartSection(
@@ -167,23 +176,23 @@ fun EmotionGratitudeScreenContent(
             )
         }
 
-        // Floating Action Button for adding emotions
-        FloatingActionButton(
-            onClick = onAddEmotion,
-            containerColor = MentorOnPrimary,
-            modifier = Modifier
-                .size(100.dp)
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
-                .clip(CircleShape)
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Добавить эмоцию",
-                tint = MentorPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+//        // Floating Action Button for adding emotions
+//        FloatingActionButton(
+//            onClick = onAddEmotion,
+//            containerColor = MentorOnPrimary,
+//            modifier = Modifier
+//                .size(100.dp)
+//                .align(Alignment.BottomEnd)
+//                .padding(24.dp)
+//                .clip(CircleShape)
+//        ) {
+//            Icon(
+//                Icons.Default.Add,
+//                contentDescription = "Добавить эмоцию",
+//                tint = MentorPrimary,
+//                modifier = Modifier.size(24.dp)
+//            )
+//        }
     }
 
     if (showEmotionDialog) {
@@ -362,9 +371,9 @@ fun GratitudeSection(
             ) {
                 Text(
                     text = "Мои благодарности",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MentorPrimary
                 )
                 Surface(
                     shape = CircleShape,
@@ -374,7 +383,7 @@ fun GratitudeSection(
                         text = gratitudes.size.toString(),
                         fontSize = 12.sp,
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
                     )
                 }
             }
@@ -427,7 +436,7 @@ fun GratitudeCard(gratitude: GratitudeEntry) {
             .height(120.dp),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = Color.White.copy(0.4f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
