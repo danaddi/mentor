@@ -1,6 +1,7 @@
 package com.example.mentor.presentation.tracker
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +22,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mentor.R
 import com.example.mentor.domain.model.Emotion
 import com.example.mentor.domain.model.EmotionType
 import com.example.mentor.domain.model.GratitudeEntry
@@ -114,57 +118,67 @@ fun EmotionGratitudeScreenContent(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Трекер")
-                        IconButton(onClick = onAddEmotion) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Добавить эмоцию",
-                                tint = MentorPrimary
-                            )
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.background_color_1),
+            contentDescription = "Emotion gratitude screen background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Трекер")
+                            IconButton(onClick = onAddEmotion) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Добавить эмоцию",
+                                    tint = MentorPrimary
+                                )
+                            }
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color(0xFF1A1A1A)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = Color(0xFF1A1A1A)
+                    )
                 )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            DonutChartSection(
-                emotions = emotions
-                    .groupBy { emotionTypeFromApiName(it.emotionType) }
-                    .mapValues { (_, list) -> list.size }
-                    .toList(),
-                startDate = startDate,
-                endDate = endDate,
-                onDateRangeClick = { showDatePicker = true }
-            )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                DonutChartSection(
+                    emotions = emotions
+                        .groupBy { emotionTypeFromApiName(it.emotionType) }
+                        .mapValues { (_, list) -> list.size }
+                        .toList(),
+                    startDate = startDate,
+                    endDate = endDate,
+                    onDateRangeClick = { showDatePicker = true }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            GratitudeSection(
-                gratitudes = gratitudeEntries,
-                onAddGratitude = onAddGratitude
-            )
+                GratitudeSection(
+                    gratitudes = gratitudeEntries,
+                    onAddGratitude = onAddGratitude
+                )
+            }
         }
     }
-
 
     if (showEmotionDialog) {
         AddEmotionDialog(
