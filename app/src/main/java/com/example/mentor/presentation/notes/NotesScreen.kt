@@ -1,8 +1,10 @@
 package com.example.mentor.presentation.notes
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -11,15 +13,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mentor.R
 import com.example.mentor.domain.model.Note
+import com.example.mentor.ui.theme.MentorBackground
+import com.example.mentor.ui.theme.MentorOnPrimary
 import com.example.mentor.ui.theme.MentorPrimary
+import com.example.mentor.ui.theme.MentorOnSecondary
 import com.example.mentor.ui.theme.MentorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,51 +41,51 @@ fun NotesScreen(
     var searchQuery by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Заметки") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color(0xFF1A1A1A)
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddNoteDialog = true },
-                containerColor = MentorPrimary,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Добавить заметку",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.background_color_1),
+            contentDescription = "Notes screen background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 48.dp)
         ) {
+            // Custom TopAppBar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Заметки",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MentorPrimary
+                )
+            }
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(bottom = 16.dp),
                 placeholder = { Text("Поиск по заметкам") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = "Search")
                 },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(30.dp),
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
                     focusedIndicatorColor = MentorPrimary,
                     unfocusedIndicatorColor = Color(0xFF8C8C8C)
                 )
@@ -115,7 +125,7 @@ fun NotesScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredNotes) { note ->
@@ -145,6 +155,24 @@ fun NotesScreen(
                     }
                 }
             }
+        }
+
+        // Floating Action Button
+        FloatingActionButton(
+            onClick = { showAddNoteDialog = true },
+            containerColor = MentorOnPrimary,
+            modifier = Modifier
+                .size(100.dp)
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .clip(CircleShape)
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Добавить заметку",
+                tint = MentorPrimary,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 
@@ -267,7 +295,7 @@ fun NoteItem(note: Note) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = Color(0xFFFFFFFF).copy(0.4f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
