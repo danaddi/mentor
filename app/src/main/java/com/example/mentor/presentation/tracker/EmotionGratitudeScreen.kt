@@ -46,6 +46,7 @@ import com.example.mentor.ui.theme.EmotionJoy
 import com.example.mentor.ui.theme.EmotionNeutral
 import com.example.mentor.ui.theme.EmotionSadness
 import com.example.mentor.ui.theme.EmotionSurprise
+import com.example.mentor.ui.theme.MentorOnPrimary
 import com.example.mentor.ui.theme.MentorPrimary
 import com.example.mentor.ui.theme.MentorTheme
 import java.time.Instant
@@ -128,55 +129,60 @@ fun EmotionGratitudeScreenContent(
             contentScale = ContentScale.Crop
         )
         
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Трекер")
-                            IconButton(onClick = onAddEmotion) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "Добавить эмоцию",
-                                    tint = MentorPrimary
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF1A1A1A)
-                    )
-                )
-            }
-        ) { paddingValues ->
-            Column(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 48.dp)
+        ) {
+            // Custom TopAppBar
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                DonutChartSection(
-                    emotions = emotions
-                        .groupBy { emotionTypeFromApiName(it.emotionType) }
-                        .mapValues { (_, list) -> list.size }
-                        .toList(),
-                    startDate = startDate,
-                    endDate = endDate,
-                    onDateRangeClick = { showDatePicker = true }
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                GratitudeSection(
-                    gratitudes = gratitudeEntries,
-                    onAddGratitude = onAddGratitude
+                Text(
+                    text = "Трекер",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MentorPrimary
                 )
             }
+
+            DonutChartSection(
+                emotions = emotions
+                    .groupBy { emotionTypeFromApiName(it.emotionType) }
+                    .mapValues { (_, list) -> list.size }
+                    .toList(),
+                startDate = startDate,
+                endDate = endDate,
+                onDateRangeClick = { showDatePicker = true }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            GratitudeSection(
+                gratitudes = gratitudeEntries,
+                onAddGratitude = onAddGratitude
+            )
+        }
+
+        // Floating Action Button for adding emotions
+        FloatingActionButton(
+            onClick = onAddEmotion,
+            containerColor = MentorOnPrimary,
+            modifier = Modifier
+                .size(100.dp)
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .clip(CircleShape)
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Добавить эмоцию",
+                tint = MentorPrimary,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 
@@ -233,11 +239,11 @@ fun DonutChartSection(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(200.dp),
+            modifier = Modifier.size(256.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = 40f
+                val strokeWidth = 100f
                 val radius = (size.minDimension - strokeWidth) / 2
                 val center = Offset(size.width / 2, size.height / 2)
 
@@ -329,7 +335,7 @@ fun LegendItem(color: Color, label: String, percentage: Int) {
         Text(
             text = "$label ($percentage%)",
             fontSize = 12.sp,
-            color = Color(0xFF8C8C8C)
+            color = MentorPrimary
         )
     }
 }
