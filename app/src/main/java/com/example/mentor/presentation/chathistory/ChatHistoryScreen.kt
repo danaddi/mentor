@@ -11,6 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +86,7 @@ fun ChatHistoryScreen(
                         items(state.sessions) { session ->
                             SessionItem(
                                 session = session,
-                                onClick = { onSessionClick(session.id) }
+                                onClick = { onSessionClick(session.session.id) }
                             )
                         }
                     }
@@ -114,7 +119,7 @@ fun ChatHistoryScreen(
 
 @Composable
 fun SessionItem(
-    session: com.example.mentor.domain.model.ChatSession,
+    session: SessionWithTitle,
     onClick: () -> Unit
 ) {
     Card(
@@ -128,15 +133,26 @@ fun SessionItem(
                 .padding(16.dp)
         ) {
             Text(
-                text = session.sectionType,
+                text = session.title,
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Создан: ${session.createdAt}",
+                text = "Создан: ${formatDate(session.session.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+private fun formatDate(isoDateString: String): String {
+    return try {
+        val instant = Instant.parse(isoDateString)
+        val zonedDateTime = ZonedDateTime.ofInstant(instant, ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale("ru"))
+        zonedDateTime.format(formatter)
+    } catch (e: Exception) {
+        isoDateString
     }
 }

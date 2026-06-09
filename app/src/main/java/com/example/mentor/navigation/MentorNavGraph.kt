@@ -109,9 +109,15 @@ fun MentorNavGraph(tokenDataStore: TokenDataStore) {
         }
         
         // Main scaffold with persistent bottom bar
-        composable(Routes.MAIN) {
+        composable(Routes.MAIN) { backStackEntry ->
+            val selectedSessionId = backStackEntry.savedStateHandle?.get<String>("selected_session_id")
+            // Remove it so it doesn't persist across future navigations
+            if (selectedSessionId != null) {
+                backStackEntry.savedStateHandle?.remove<String>("selected_session_id")
+            }
             MainScreen(
-                rootNavController = rootNavController
+                rootNavController = rootNavController,
+                initialSessionId = selectedSessionId
             )
         }
         
@@ -119,7 +125,7 @@ fun MentorNavGraph(tokenDataStore: TokenDataStore) {
         composable(Routes.CHAT_HISTORY) {
             ChatHistoryScreen(
                 onSessionClick = { sessionId ->
-                    // Navigate back to chat with session ID
+                    rootNavController.previousBackStackEntry?.savedStateHandle?.set("selected_session_id", sessionId)
                     rootNavController.popBackStack()
                 }
             )
@@ -128,8 +134,20 @@ fun MentorNavGraph(tokenDataStore: TokenDataStore) {
 }
 
 @Composable
-fun MainScreen(rootNavController: androidx.navigation.NavController) {
+fun MainScreen(
+    rootNavController: androidx.navigation.NavController,
+    initialSessionId: String? = null
+) {
     val bottomNavController = rememberNavController()
+    // Remember the session ID so it survives recomposition within this screen
+    var pendingSessionId by remember { mutableStateOf(initialSessionId) }
+    
+    // Update when new initialSessionId arrives (e.g., from history)
+    LaunchedEffect(initialSessionId) {
+        if (initialSessionId != null) {
+            pendingSessionId = initialSessionId
+        }
+    }
     
     // Bottom nav items
     val bottomNavItems = listOf(
@@ -180,12 +198,20 @@ fun MainScreen(rootNavController: androidx.navigation.NavController) {
             startDestination = Routes.CHAT,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Routes.CHAT) { 
+            composable(Routes.CHAT) {
+                val sessionToLoad = pendingSessionId
                 ChatScreen(
                     onNavigateToHistory = {
                         rootNavController.navigate(Routes.CHAT_HISTORY)
-                    }
+                    },
+                    sessionId = sessionToLoad
                 )
+                // Clear pending after passing to ChatScreen
+                LaunchedEffect(sessionToLoad) {
+                    if (sessionToLoad != null) {
+                        pendingSessionId = null
+                    }
+                }
             }
             composable(Routes.NOTES) { NotesScreen() }
             composable(Routes.TRACKER) {

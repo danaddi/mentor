@@ -43,6 +43,7 @@ class ChatViewModel @Inject constructor(
 
     private fun loadMessages(sessionId: String) {
         viewModelScope.launch {
+            _uiState.value = ChatUiState.Loading
             val result = getMessagesUseCase(sessionId)
             result.fold(
                 onSuccess = { messages ->
@@ -54,6 +55,11 @@ class ChatViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    fun loadExistingSession(sessionId: String) {
+        currentSessionId = sessionId
+        loadMessages(sessionId)
     }
 
     fun sendMessage(content: String) {

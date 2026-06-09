@@ -30,6 +30,7 @@ import com.example.mentor.ui.theme.MentorTheme
 @Composable
 fun ChatScreen(
     onNavigateToHistory: () -> Unit = {},
+    sessionId: String? = null,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     var messageText by remember { mutableStateOf("") }
@@ -38,8 +39,14 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
+    LaunchedEffect(sessionId) {
+        if (sessionId != null) {
+            viewModel.loadExistingSession(sessionId)
+        }
+    }
+
     LaunchedEffect(uiState) {
-        if (uiState is ChatUiState.Initial) {
+        if (uiState is ChatUiState.Initial && sessionId == null) {
             viewModel.createSession()
         }
     }

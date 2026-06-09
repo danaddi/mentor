@@ -1,6 +1,7 @@
 package com.example.mentor.presentation.notes
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +30,6 @@ import com.example.mentor.domain.model.Note
 import com.example.mentor.ui.theme.MentorBackground
 import com.example.mentor.ui.theme.MentorOnPrimary
 import com.example.mentor.ui.theme.MentorPrimary
-import com.example.mentor.ui.theme.MentorOnSecondary
 import com.example.mentor.ui.theme.MentorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +40,7 @@ fun NotesScreen(
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
+    val selectedNote by viewModel.selectedNote.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -129,7 +130,10 @@ fun NotesScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredNotes) { note ->
-                                NoteItem(note = note)
+                                NoteItem(
+                                    note = note,
+                                    onClick = { viewModel.selectNote(note) }
+                                )
                             }
                         }
                     }
@@ -176,9 +180,13 @@ fun NotesScreen(
         }
     }
 
-    if (showAddNoteDialog) {
+    if (showAddNoteDialog || selectedNote != null) {
         AddNoteDialog(
-            onDismiss = { showAddNoteDialog = false },
+            note = selectedNote,
+            onDismiss = {
+                showAddNoteDialog = false
+                viewModel.clearSelectedNote()
+            },
             onConfirm = { content ->
                 viewModel.createNote(content)
                 showAddNoteDialog = false
@@ -290,9 +298,11 @@ fun NotesScreenContent(
 }
 
 @Composable
-fun NoteItem(note: Note) {
+fun NoteItem(note: Note, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFFFFF).copy(0.4f)
@@ -323,10 +333,12 @@ fun NoteItem(note: Note) {
 
 @Composable
 fun AddNoteDialog(
+    note: Note? = null,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var noteContent by remember { mutableStateOf("") }
+    var noteContent by remember { mutableStateOf(if (note != null) note.content else "") }
+    val isViewMode = note != null
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -337,7 +349,7 @@ fun AddNoteDialog(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "Новая заметка",
+                    text = if (isViewMode) "Просмотр заметки" else "Новая заметка",
                     fontSize = 18.sp,
                     color = Color(0xFF1A1A1A),
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -345,13 +357,14 @@ fun AddNoteDialog(
 
                 OutlinedTextField(
                     value = noteContent,
-                    onValueChange = { noteContent = it },
+                    onValueChange = { if (!isViewMode) noteContent = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp),
                     placeholder = { Text("Введите текст заметки...") },
                     maxLines = 5,
                     shape = RoundedCornerShape(8.dp),
+                    readOnly = isViewMode,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White,
@@ -360,29 +373,44 @@ fun AddNoteDialog(
                     )
                 )
 
+                if (isViewMode) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Создано: ${note?.createdAt ?: ""}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF8C8C8C)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Отмена", color = Color(0xFF8C8C8C))
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (noteContent.isNotBlank()) {
-                                onConfirm(noteContent)
-                            }
-                        },
-                        enabled = noteContent.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MentorPrimary,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text("Сохранить")
+                    if (isViewMode) {
+                        TextButton(onClick = onDismiss) {
+                            Text("Закрыть", color = Color(0xFF8C8C8C))
+                        }
+                    } else {
+                        TextButton(onClick = onDismiss) {
+                            Text("Отмена", color = Color(0xFF8C8C8C))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (noteContent.isNotBlank()) {
+                                    onConfirm(noteContent)
+                                }
+                            },
+                            enabled = noteContent.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MentorPrimary,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Сохранить")
+                        }
                     }
                 }
             }

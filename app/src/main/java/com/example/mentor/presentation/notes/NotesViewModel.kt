@@ -2,6 +2,7 @@ package com.example.mentor.presentation.notes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mentor.domain.model.Note
 import com.example.mentor.domain.usecase.CreateNoteUseCase
 import com.example.mentor.domain.usecase.GetNotesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,9 @@ class NotesViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<NotesUiState>(NotesUiState.Initial)
     val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
+
+    private val _selectedNote = MutableStateFlow<Note?>(null)
+    val selectedNote: StateFlow<Note?> = _selectedNote.asStateFlow()
 
     init {
         loadNotes()
@@ -55,6 +59,14 @@ class NotesViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    fun selectNote(note: Note) {
+        _selectedNote.value = note
+    }
+
+    fun clearSelectedNote() {
+        _selectedNote.value = null
     }
 
     fun refresh() {
