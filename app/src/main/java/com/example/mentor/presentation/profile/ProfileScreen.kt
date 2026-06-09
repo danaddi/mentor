@@ -1,5 +1,7 @@
 package com.example.mentor.presentation.profile
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -117,6 +120,8 @@ fun ProfileScreenContent(
     onDeleteAccount: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
+    val context = LocalContext.current
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -173,7 +178,12 @@ fun ProfileScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com"))
+                        context.startActivity(intent)
+                    },
                 shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White

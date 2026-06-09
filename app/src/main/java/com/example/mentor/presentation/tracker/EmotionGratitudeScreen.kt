@@ -149,7 +149,7 @@ fun EmotionGratitudeScreenContent(
                     fontWeight = FontWeight.Medium,
                     color = MentorPrimary
                 )
-                IconButton(onClick = onAddGratitude) {
+                IconButton(onClick = onAddEmotion) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "Добавить эмоцию",
